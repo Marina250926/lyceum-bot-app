@@ -6,8 +6,9 @@ let currentUser = null;
 document.addEventListener('DOMContentLoaded', () => {
     checkAuth();
     setupEventListeners();
-    setupPushNotifications();
-    setupOfflineSupport();
+    // Тимчасово відключаємо push та service worker для розробки
+    // setupPushNotifications();
+    // setupOfflineSupport();
 });
 
 // Перевірка авторизації
@@ -27,8 +28,9 @@ function showLoginScreen() {
     const loginHTML = `
         <div class="login-screen">
             <div class="login-card">
-                <img src="assets/logo.png" alt="Logo" class="login-logo" onerror="this.src='https://via.placeholder.com/100'">
+                <div class="login-logo">🏫</div>
                 <h2>Ліцей Бот</h2>
+                <p style="color: #666; margin-bottom: 20px;">Демо вхід: admin / admin123</p>
                 <input type="text" id="login" placeholder="Логін" class="login-input">
                 <input type="password" id="password" placeholder="Пароль" class="login-input">
                 <button onclick="doLogin()" class="login-btn">Увійти</button>
@@ -36,11 +38,14 @@ function showLoginScreen() {
         </div>
     `;
     
-    document.querySelector('.app-container').innerHTML = loginHTML;
+    const container = document.querySelector('.app-container');
+    if (container) {
+        container.innerHTML = loginHTML;
+    }
 }
 
 // Виконання входу
-async function doLogin() {
+window.doLogin = async function() {
     const login = document.getElementById('login').value;
     const password = document.getElementById('password').value;
     
@@ -52,12 +57,12 @@ async function doLogin() {
         updateUI();
         await loadData();
         hideLoading();
-        location.reload(); // Перезавантаження для оновлення UI
+        location.reload();
     } catch (error) {
         hideLoading();
         alert('Помилка входу: ' + error.message);
     }
-}
+};
 
 // Оновлення UI після входу
 function updateUI() {
@@ -188,7 +193,7 @@ function displayCurrentLesson(lesson) {
     `;
 }
 
-// Зміна дня - глобальна функція
+// Зміна дня
 window.changeDay = async function(direction) {
     const days = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця'];
     const currentIndex = days.indexOf(currentDay);
@@ -202,24 +207,24 @@ window.changeDay = async function(direction) {
     await loadSchedule(currentDay);
 };
 
-// Сьогоднішній день - глобальна функція
+// Сьогоднішній день
 window.setToday = async function() {
-    const today = new Date().toLocaleDateString('uk-UA', { weekday: 'long' });
-    // Нормалізуємо назву дня
+    const today = new Date();
     const dayMap = {
-        'понеділок': 'Понеділок',
-        'вівторок': 'Вівторок',
-        'середа': 'Середа',
-        'четвер': 'Четвер',
-        'пʼятниця': 'П\'ятниця',
-        'пятниця': 'П\'ятниця',
-        'субота': 'Субота',
-        'неділя': 'Неділя'
+        1: 'Понеділок',
+        2: 'Вівторок',
+        3: 'Середа',
+        4: 'Четвер',
+        5: 'П\'ятниця',
+        6: 'Субота',
+        7: 'Неділя'
     };
     
-    const normalizedDay = dayMap[today.toLowerCase()] || 'Понеділок';
-    if (normalizedDay !== 'Субота' && normalizedDay !== 'Неділя') {
-        currentDay = normalizedDay;
+    const dayNumber = today.getDay();
+    const dayName = dayMap[dayNumber] || 'Понеділок';
+    
+    if (dayName !== 'Субота' && dayName !== 'Неділя') {
+        currentDay = dayName;
     } else {
         currentDay = 'Понеділок';
     }
@@ -227,46 +232,7 @@ window.setToday = async function() {
     await loadSchedule(currentDay);
 };
 
-// Push Notifications
-async function setupPushNotifications() {
-    if ('Notification' in window && 'serviceWorker' in navigator) {
-        const permission = await Notification.requestPermission();
-        
-        if (permission === 'granted') {
-            try {
-                const sw = await navigator.serviceWorker.register('/sw.js');
-                const subscription = await sw.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: 'BHsZGAU8DED4TsUZ0UygHuZWzqVKv2nWJYxsYbYHL3iHYYgseKpYtr2U3YxgRf4wpIqPlqCkmWEUC0oLSS1TvCI'
-                });
-                
-                // Відправка subscription на сервер
-                await api.request('/subscribe', {
-                    method: 'POST',
-                    body: JSON.stringify(subscription)
-                });
-            } catch (error) {
-                console.error('Помилка налаштування push:', error);
-            }
-        }
-    }
-}
-
-// Offline support
-function setupOfflineSupport() {
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').catch(error => {
-            console.error('Помилка реєстрації Service Worker:', error);
-        });
-    }
-    
-    // Кешування даних для офлайн режиму
-    window.addEventListener('online', () => {
-        syncData();
-    });
-}
-
-// Синхронізація даних - глобальна функція
+// Синхронізація даних
 window.syncData = async function() {
     showLoading();
     try {
@@ -279,7 +245,7 @@ window.syncData = async function() {
     hideLoading();
 };
 
-// Вихід - глобальна функція
+// Вихід
 window.logout = function() {
     if (api) {
         api.logout();
@@ -303,17 +269,27 @@ function showError(message) {
 }
 
 function showToast(message) {
-    // Простий toast
     const toast = document.createElement('div');
     toast.className = 'toast';
     toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #333;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        z-index: 1000;
+        animation: fadeInOut 3s ease;
+    `;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
 }
 
 // Налаштування обробників подій
 function setupEventListeners() {
-    // Таби
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const tab = btn.dataset.tab;
@@ -323,13 +299,11 @@ function setupEventListeners() {
 }
 
 function switchTab(tabName) {
-    // Оновлення активного табу
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.remove('active');
         if (btn.dataset.tab === tabName) btn.classList.add('active');
     });
     
-    // Оновлення вмісту
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.remove('active');
     });

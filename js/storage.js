@@ -1,5 +1,4 @@
-// storage.js - Керування локальним сховищем
-
+// storage.js - просте сховище
 class LocalStorage {
     constructor() {
         this.prefix = 'lyceum_';

@@ -1,28 +1,59 @@
 class LyceumAPI {
     constructor() {
-        // Використовуємо реальний API або локальний сервер
-        this.baseURL = 'https://your-bot-api.com/api'; // Змініть на ваш URL
+        // Для розробки використовуємо localStorage
         this.token = localStorage.getItem('auth_token');
     }
     
     async request(endpoint, options = {}) {
-        const url = `${this.baseURL}${endpoint}`;
-        const headers = {
-            'Content-Type': 'application/json',
-            ...(this.token && { 'Authorization': `Bearer ${this.token}` })
-        };
+        // Симуляція API для розробки
+        console.log(`API Request: ${endpoint}`, options);
         
-        try {
-            const response = await fetch(url, { ...options, headers });
-            if (!response.ok) {
-                const error = await response.json().catch(() => ({}));
-                throw new Error(error.detail || `HTTP ${response.status}`);
+        // Імітуємо затримку мережі
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Тестові дані
+        if (endpoint === '/auth/login') {
+            const { login, password } = JSON.parse(options.body);
+            if (login === 'admin' && password === 'admin123') {
+                return {
+                    token: 'test_token',
+                    user: {
+                        full_name: 'Адміністратор',
+                        role: 'admin',
+                        group_name: '',
+                        subgroup: ''
+                    }
+                };
+            } else if (login === 'teacher' && password === 'teacher123') {
+                return {
+                    token: 'test_token',
+                    user: {
+                        full_name: 'Іваненко І.І.',
+                        role: 'teacher',
+                        group_name: '8-А',
+                        subgroup: ''
+                    }
+                };
+            } else {
+                throw new Error('Невірний логін або пароль');
             }
-            return await response.json();
-        } catch (error) {
-            console.error('API Error:', error);
-            throw error;
         }
+        
+        if (endpoint === '/schedule') {
+            const url = new URL(`https://dummy${endpoint}`);
+            const day = url.searchParams.get('day');
+            return this.getMockSchedule(day);
+        }
+        
+        if (endpoint === '/substitutions') {
+            return [];
+        }
+        
+        if (endpoint === '/current-lesson') {
+            return null;
+        }
+        
+        return {};
     }
     
     async login(login, password) {
@@ -46,54 +77,45 @@ class LyceumAPI {
     }
     
     async getSchedule(day) {
-        try {
-            return await this.request(`/schedule?day=${encodeURIComponent(day)}`);
-        } catch (error) {
-            console.error('Помилка отримання розкладу:', error);
-            // Повертаємо тестові дані для розробки
-            return this.getMockSchedule(day);
-        }
+        return this.getMockSchedule(day);
     }
     
     async getSubstitutions() {
-        try {
-            return await this.request('/substitutions');
-        } catch (error) {
-            console.error('Помилка отримання замін:', error);
-            return [];
-        }
+        return [];
     }
     
     async getCurrentLesson() {
-        try {
-            return await this.request('/current-lesson');
-        } catch (error) {
-            console.error('Помилка отримання поточного уроку:', error);
-            return null;
-        }
+        return null;
     }
     
     async syncData() {
-        try {
-            return await this.request('/sync', { method: 'POST' });
-        } catch (error) {
-            console.error('Помилка синхронізації:', error);
-            throw error;
-        }
+        return { success: true };
     }
     
-    // Тестові дані для розробки
     getMockSchedule(day) {
         const mockData = {
             'Понеділок': [
-                { lesson_num: 1, time_range: '9:00 – 9:40', subject: 'Математика', teacher: 'Іваненко І.І.', classroom: '101', subgroup: null },
-                { lesson_num: 2, time_range: '9:45 – 10:25', subject: 'Українська мова', teacher: 'Петренко О.О.', classroom: '102', subgroup: null },
-                { lesson_num: 3, time_range: '10:45 – 11:25', subject: 'Історія', teacher: 'Сидоренко М.М.', classroom: '103', subgroup: null },
-                { lesson_num: 4, time_range: '11:30 – 12:10', subject: 'Англійська мова', teacher: 'Коваленко Т.В.', classroom: '201', subgroup: '1' }
+                { lesson_num: 1, time_range: '9:00 – 9:40', subject: 'Математика', teacher: 'Іваненко І.І.', classroom: '101' },
+                { lesson_num: 2, time_range: '9:45 – 10:25', subject: 'Українська мова', teacher: 'Петренко О.О.', classroom: '102' },
+                { lesson_num: 3, time_range: '10:45 – 11:25', subject: 'Історія України', teacher: 'Сидоренко М.М.', classroom: '103' },
+                { lesson_num: 4, time_range: '11:30 – 12:10', subject: 'Англійська мова', teacher: 'Коваленко Т.В.', classroom: '201' },
+                { lesson_num: 5, time_range: '13:00 – 13:40', subject: 'Фізика', teacher: 'Шевченко А.В.', classroom: '301' }
             ],
             'Вівторок': [
-                { lesson_num: 1, time_range: '9:00 – 9:40', subject: 'Фізика', teacher: 'Шевченко А.В.', classroom: '301', subgroup: null },
-                { lesson_num: 2, time_range: '9:45 – 10:25', subject: 'Хімія', teacher: 'Бондаренко Л.П.', classroom: '302', subgroup: null }
+                { lesson_num: 1, time_range: '9:00 – 9:40', subject: 'Хімія', teacher: 'Бондаренко Л.П.', classroom: '302' },
+                { lesson_num: 2, time_range: '9:45 – 10:25', subject: 'Біологія', teacher: 'Ковальчук Н.В.', classroom: '303' },
+                { lesson_num: 3, time_range: '10:45 – 11:25', subject: 'Географія', teacher: 'Мельник О.І.', classroom: '304' }
+            ],
+            'Середа': [
+                { lesson_num: 1, time_range: '9:00 – 9:40', subject: 'Зарубіжна література', teacher: 'Гриценко Т.М.', classroom: '105' },
+                { lesson_num: 2, time_range: '9:45 – 10:25', subject: 'Інформатика', teacher: 'Романенко В.В.', classroom: '202' }
+            ],
+            'Четвер': [
+                { lesson_num: 1, time_range: '9:00 – 9:40', subject: 'Фізкультура', teacher: 'Спортивний О.П.', classroom: 'Спортзал' },
+                { lesson_num: 2, time_range: '9:45 – 10:25', subject: 'Музика', teacher: 'Музченко І.І.', classroom: '106' }
+            ],
+            'П\'ятниця': [
+                { lesson_num: 1, time_range: '9:00 – 9:40', subject: 'Трудове навчання', teacher: 'Трудовий М.П.', classroom: 'Майстерня' }
             ]
         };
         

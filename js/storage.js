@@ -5,11 +5,9 @@ class LocalStorage {
         this.prefix = 'lyceum_';
     }
     
-    // Зберегти дані
     set(key, value) {
         try {
-            const serialized = JSON.stringify(value);
-            localStorage.setItem(this.prefix + key, serialized);
+            localStorage.setItem(this.prefix + key, JSON.stringify(value));
             return true;
         } catch (error) {
             console.error('Помилка збереження:', error);
@@ -17,24 +15,20 @@ class LocalStorage {
         }
     }
     
-    // Отримати дані
     get(key, defaultValue = null) {
         try {
             const item = localStorage.getItem(this.prefix + key);
-            if (item === null) return defaultValue;
-            return JSON.parse(item);
+            return item ? JSON.parse(item) : defaultValue;
         } catch (error) {
             console.error('Помилка читання:', error);
             return defaultValue;
         }
     }
     
-    // Видалити дані
     remove(key) {
         localStorage.removeItem(this.prefix + key);
     }
     
-    // Очистити всі дані
     clear() {
         const keys = Object.keys(localStorage);
         keys.forEach(key => {
@@ -43,12 +37,6 @@ class LocalStorage {
             }
         });
     }
-    
-    // Перевірити наявність
-    has(key) {
-        return localStorage.getItem(this.prefix + key) !== null;
-    }
 }
 
-// Експортуємо екземпляр
 const storage = new LocalStorage();

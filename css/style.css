@@ -22,11 +22,6 @@
     box-shadow: 0 10px 40px rgba(0,0,0,0.2);
 }
 
-.login-logo {
-    font-size: 48px;
-    margin-bottom: 20px;
-}
-
 .login-input {
     width: 100%;
     padding: 12px;
@@ -51,12 +46,4 @@
 
 .login-btn:hover {
     background: #5a67d8;
-}
-
-/* Toast animation */
-@keyframes fadeInOut {
-    0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
-    10% { opacity: 1; transform: translateX(-50%) translateY(0); }
-    90% { opacity: 1; transform: translateX(-50%) translateY(0); }
-    100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
 }

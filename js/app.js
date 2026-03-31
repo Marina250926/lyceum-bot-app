@@ -176,7 +176,7 @@ function displayCurrentLesson(lesson) {
 
 // Зміна дня
 async function changeDay(direction) {
-    const days = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П'ятниця'];
+    const days = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця'];
     const currentIndex = days.indexOf(currentDay);
     
     if (direction === 'prev' && currentIndex > 0) {

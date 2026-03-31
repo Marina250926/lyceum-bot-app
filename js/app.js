@@ -6,7 +6,7 @@ let currentUser = null;
 document.addEventListener('DOMContentLoaded', () => {
     checkAuth();
     setupEventListeners();
-    // Тимчасово відключаємо push та service worker для розробки
+    // Вимкнено для розробки
     // setupPushNotifications();
     // setupOfflineSupport();
 });
@@ -28,11 +28,11 @@ function showLoginScreen() {
     const loginHTML = `
         <div class="login-screen">
             <div class="login-card">
-                <div class="login-logo">🏫</div>
+                <div style="font-size: 48px; margin-bottom: 20px;">🏫</div>
                 <h2>Ліцей Бот</h2>
                 <p style="color: #666; margin-bottom: 20px;">Демо вхід: admin / admin123</p>
-                <input type="text" id="login" placeholder="Логін" class="login-input">
-                <input type="password" id="password" placeholder="Пароль" class="login-input">
+                <input type="text" id="login" placeholder="Логін" class="login-input" value="admin">
+                <input type="password" id="password" placeholder="Пароль" class="login-input" value="admin123">
                 <button onclick="doLogin()" class="login-btn">Увійти</button>
             </div>
         </div>
@@ -123,7 +123,6 @@ function displaySchedule(lessons) {
             <div class="lesson-details">
                 <p>👨‍🏫 ${lesson.teacher}</p>
                 <p>🏫 ${lesson.classroom}</p>
-                ${lesson.subgroup ? `<p>🔹 Підгрупа ${lesson.subgroup}</p>` : ''}
             </div>
         </div>
     `).join('');
@@ -210,25 +209,16 @@ window.changeDay = async function(direction) {
 // Сьогоднішній день
 window.setToday = async function() {
     const today = new Date();
-    const dayMap = {
+    const dayNumber = today.getDay();
+    const dayNames = {
         1: 'Понеділок',
         2: 'Вівторок',
         3: 'Середа',
         4: 'Четвер',
-        5: 'П\'ятниця',
-        6: 'Субота',
-        7: 'Неділя'
+        5: 'П\'ятниця'
     };
     
-    const dayNumber = today.getDay();
-    const dayName = dayMap[dayNumber] || 'Понеділок';
-    
-    if (dayName !== 'Субота' && dayName !== 'Неділя') {
-        currentDay = dayName;
-    } else {
-        currentDay = 'Понеділок';
-    }
-    
+    currentDay = dayNames[dayNumber] || 'Понеділок';
     await loadSchedule(currentDay);
 };
 
@@ -270,7 +260,6 @@ function showError(message) {
 
 function showToast(message) {
     const toast = document.createElement('div');
-    toast.className = 'toast';
     toast.textContent = message;
     toast.style.cssText = `
         position: fixed;
@@ -282,6 +271,7 @@ function showToast(message) {
         padding: 10px 20px;
         border-radius: 8px;
         z-index: 1000;
+        font-size: 14px;
         animation: fadeInOut 3s ease;
     `;
     document.body.appendChild(toast);
@@ -310,3 +300,15 @@ function switchTab(tabName) {
     const activeTab = document.getElementById(`${tabName}Tab`);
     if (activeTab) activeTab.classList.add('active');
 }
+
+// Додаємо анімацію для toast
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes fadeInOut {
+        0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+        10% { opacity: 1; transform: translateX(-50%) translateY(0); }
+        90% { opacity: 1; transform: translateX(-50%) translateY(0); }
+        100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+    }
+`;
+document.head.appendChild(style);

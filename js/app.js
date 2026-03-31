@@ -1,148 +1,113 @@
-// ==========================================
-// ГЛОБАЛЬНІ ЗМІННІ ТА КОНСТАНТИ
-// ==========================================
-const DAYS_ORDER = ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця"];
-let currentDay = "Понеділок";
+// Глобальні змінні
+let currentDay = 'Понеділок';
 let currentUser = null;
 
-// ==========================================
-// ІНІЦІАЛІЗАЦІЯ
-// ==========================================
+// Ініціалізація додатку
 document.addEventListener('DOMContentLoaded', () => {
-    initApp();
+    checkAuth();
+    setupEventListeners();
+    setupPushNotifications();
+    setupOfflineSupport();
 });
 
-async function initApp() {
-    setupEventListeners();
-    await checkAuth();
-    setupOfflineSupport();
-    setupPushNotifications();
-}
-
-// ==========================================
-// АВТОРИЗАЦІЯ ТА UI
-// ==========================================
+// Перевірка авторизації
 async function checkAuth() {
     const userData = localStorage.getItem('user_data');
     if (userData) {
-        try {
-            currentUser = JSON.parse(userData);
-            setToday(); // Встановлюємо актуальний день
-            updateFullUI(); // Оновлюємо весь інтерфейс
-            await loadData();
-        } catch (e) {
-            console.error("Помилка парсингу даних користувача");
-            showLoginScreen();
-        }
+        currentUser = JSON.parse(userData);
+        updateUI();
+        await loadData();
     } else {
         showLoginScreen();
     }
 }
 
+// Показати екран входу
 function showLoginScreen() {
     const loginHTML = `
         <div class="login-screen">
             <div class="login-card">
-                <img src="assets/logo.png" alt="Logo" class="login-logo">
+                <img src="assets/logo.png" alt="Logo" class="login-logo" onerror="this.src='https://via.placeholder.com/100'">
                 <h2>Ліцей Бот</h2>
-                <div class="login-form">
-                    <input type="text" id="login" placeholder="Логін" class="login-input">
-                    <input type="password" id="password" placeholder="Пароль" class="login-input">
-                    <button onclick="doLogin()" class="login-btn">Увійти</button>
-                </div>
+                <input type="text" id="login" placeholder="Логін" class="login-input">
+                <input type="password" id="password" placeholder="Пароль" class="login-input">
+                <button onclick="doLogin()" class="login-btn">Увійти</button>
             </div>
         </div>
     `;
-    const container = document.querySelector('.app-container');
-    if (container) container.innerHTML = loginHTML;
+    
+    document.querySelector('.app-container').innerHTML = loginHTML;
 }
 
+// Виконання входу
 async function doLogin() {
-    const loginInput = document.getElementById('login');
-    const passwordInput = document.getElementById('password');
+    const login = document.getElementById('login').value;
+    const password = document.getElementById('password').value;
     
-    if (!loginInput.value || !passwordInput.value) {
-        alert("Введіть логін та пароль");
-        return;
-    }
-
     showLoading();
+    
     try {
-        const result = await api.login(loginInput.value, passwordInput.value);
+        const result = await api.login(login, password);
         currentUser = result.user;
-        // Зберігаємо дані
-        localStorage.setItem('user_data', JSON.stringify(currentUser));
-        localStorage.setItem('user_token', result.token);
-        
-        location.reload(); // Перезавантаження для чистої ініціалізації
+        updateUI();
+        await loadData();
+        hideLoading();
+        location.reload(); // Перезавантаження для оновлення UI
     } catch (error) {
         hideLoading();
         alert('Помилка входу: ' + error.message);
     }
 }
 
-function updateFullUI() {
+// Оновлення UI після входу
+function updateUI() {
     if (!currentUser) return;
     
-    // Оновлення імен (в шапці та профілі)
-    const nameElements = ['userName', 'profileName'];
-    nameElements.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = currentUser.full_name || currentUser.name;
-    });
-
-    // Оновлення полів профілю
-    const fields = {
-        'profileRole': currentUser.role,
-        'profileGroup': currentUser.group_name || '—',
-        'profileSubgroup': currentUser.subgroup || '—'
-    };
-
-    for (const [id, value] of Object.entries(fields)) {
-        const el = document.getElementById(id);
-        if (el) el.textContent = value;
-    }
-
-    // Оновлення тексту дня
-    const dayText = document.getElementById('currentDay');
-    if (dayText) dayText.textContent = currentDay;
+    const userNameSpan = document.getElementById('userName');
+    const profileNameSpan = document.getElementById('profileName');
+    const profileRoleSpan = document.getElementById('profileRole');
+    const profileGroupSpan = document.getElementById('profileGroup');
+    const profileSubgroupSpan = document.getElementById('profileSubgroup');
+    
+    if (userNameSpan) userNameSpan.textContent = currentUser.full_name;
+    if (profileNameSpan) profileNameSpan.textContent = currentUser.full_name;
+    if (profileRoleSpan) profileRoleSpan.textContent = currentUser.role;
+    if (profileGroupSpan) profileGroupSpan.textContent = currentUser.group_name || '—';
+    if (profileSubgroupSpan) profileSubgroupSpan.textContent = currentUser.subgroup || '—';
 }
 
-// ==========================================
-// РОБОТА З ДАНИМИ
-// ==========================================
+// Завантаження даних
 async function loadData() {
-    showLoading();
-    try {
-        await Promise.all([
-            loadSchedule(currentDay),
-            loadSubstitutions(),
-            loadCurrentLesson()
-        ]);
-    } catch (error) {
-        console.error("Помилка завантаження даних:", error);
-    } finally {
-        hideLoading();
-    }
+    await Promise.all([
+        loadSchedule(currentDay),
+        loadSubstitutions(),
+        loadCurrentLesson()
+    ]);
 }
 
+// Завантаження розкладу
 async function loadSchedule(day) {
+    showLoading();
     try {
         const data = await api.getSchedule(day);
         displaySchedule(data);
-        const dayEl = document.getElementById('currentDay');
-        if (dayEl) dayEl.textContent = day;
+        const currentDaySpan = document.getElementById('currentDay');
+        if (currentDaySpan) currentDaySpan.textContent = day;
     } catch (error) {
-        console.error('Помилка розкладу:', error);
+        console.error('Помилка завантаження розкладу:', error);
+        showError('Не вдалося завантажити розклад');
     }
+    hideLoading();
 }
 
+// Відображення розкладу
 function displaySchedule(lessons) {
     const container = document.getElementById('scheduleList');
+    
     if (!container) return;
     
     if (!lessons || lessons.length === 0) {
-        container.innerHTML = '<div class="empty-state">📭 На цей день занять немає</div>';
+        container.innerHTML = '<div class="empty-state">📭 Немає уроків</div>';
         return;
     }
     
@@ -159,89 +124,170 @@ function displaySchedule(lessons) {
     `).join('');
 }
 
-// ==========================================
-// КЕРУВАННЯ КАЛЕНДАРЕМ
-// ==========================================
-function changeDay(direction) {
-    let index = DAYS_ORDER.indexOf(currentDay);
-    if (direction === 'next') {
-        index = (index + 1) % DAYS_ORDER.length;
-    } else {
-        index = (index - 1 + DAYS_ORDER.length) % DAYS_ORDER.length;
+// Завантаження замін
+async function loadSubstitutions() {
+    try {
+        const data = await api.getSubstitutions();
+        displaySubstitutions(data);
+    } catch (error) {
+        console.error('Помилка завантаження замін:', error);
     }
-    currentDay = DAYS_ORDER[index];
-    
-    const dayEl = document.getElementById('currentDay');
-    if (dayEl) dayEl.textContent = currentDay;
-    
-    loadSchedule(currentDay);
 }
 
-function setToday() {
-    const date = new Date();
-    const dayIndex = date.getDay(); // 0 - Нд, 1 - Пн...
+function displaySubstitutions(substitutions) {
+    const container = document.getElementById('substitutionsList');
     
-    if (dayIndex === 0 || dayIndex === 6) {
-        currentDay = "Понеділок"; 
-    } else {
-        currentDay = DAYS_ORDER[dayIndex - 1];
+    if (!container) return;
+    
+    if (!substitutions || substitutions.length === 0) {
+        container.innerHTML = '<div class="empty-state">✅ Сьогодні замін немає</div>';
+        return;
     }
     
-    const dayEl = document.getElementById('currentDay');
-    if (dayEl) dayEl.textContent = currentDay;
+    container.innerHTML = substitutions.map(sub => `
+        <div class="substitution-card">
+            <strong>${sub.lesson_num}-й урок</strong>
+            <p>❌ ${sub.old_teacher}</p>
+            <p>✅ ${sub.new_teacher}</p>
+            <p>🏫 ${sub.classroom || 'той самий'}</p>
+        </div>
+    `).join('');
 }
 
-// ==========================================
-// СЕРВІСНІ ФУНКЦІЇ (Push, Offline, Loading)
-// ==========================================
+// Поточний урок
+async function loadCurrentLesson() {
+    try {
+        const lesson = await api.getCurrentLesson();
+        displayCurrentLesson(lesson);
+    } catch (error) {
+        console.error('Помилка завантаження поточного уроку:', error);
+    }
+}
+
+function displayCurrentLesson(lesson) {
+    const container = document.getElementById('currentLesson');
+    
+    if (!container) return;
+    
+    if (!lesson) {
+        container.innerHTML = '<div class="empty-state">⏰ Зараз немає уроків</div>';
+        return;
+    }
+    
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+    
+    container.innerHTML = `
+        <div class="current-lesson-card">
+            <div>⏰ ${timeString}</div>
+            <div class="current-time">${lesson.lesson_num}-й урок</div>
+            <div class="lesson-subject">${lesson.subject}</div>
+            <div>👨‍🏫 ${lesson.teacher}</div>
+            <div>🏫 ${lesson.classroom}</div>
+        </div>
+    `;
+}
+
+// Зміна дня - глобальна функція
+window.changeDay = async function(direction) {
+    const days = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця'];
+    const currentIndex = days.indexOf(currentDay);
+    
+    if (direction === 'prev' && currentIndex > 0) {
+        currentDay = days[currentIndex - 1];
+    } else if (direction === 'next' && currentIndex < days.length - 1) {
+        currentDay = days[currentIndex + 1];
+    }
+    
+    await loadSchedule(currentDay);
+};
+
+// Сьогоднішній день - глобальна функція
+window.setToday = async function() {
+    const today = new Date().toLocaleDateString('uk-UA', { weekday: 'long' });
+    // Нормалізуємо назву дня
+    const dayMap = {
+        'понеділок': 'Понеділок',
+        'вівторок': 'Вівторок',
+        'середа': 'Середа',
+        'четвер': 'Четвер',
+        'пʼятниця': 'П\'ятниця',
+        'пятниця': 'П\'ятниця',
+        'субота': 'Субота',
+        'неділя': 'Неділя'
+    };
+    
+    const normalizedDay = dayMap[today.toLowerCase()] || 'Понеділок';
+    if (normalizedDay !== 'Субота' && normalizedDay !== 'Неділя') {
+        currentDay = normalizedDay;
+    } else {
+        currentDay = 'Понеділок';
+    }
+    
+    await loadSchedule(currentDay);
+};
+
+// Push Notifications
 async function setupPushNotifications() {
     if ('Notification' in window && 'serviceWorker' in navigator) {
-        try {
-            const permission = await Notification.requestPermission();
-            if (permission === 'granted') {
-                const sw = await navigator.serviceWorker.ready;
+        const permission = await Notification.requestPermission();
+        
+        if (permission === 'granted') {
+            try {
+                const sw = await navigator.serviceWorker.register('/sw.js');
                 const subscription = await sw.pushManager.subscribe({
                     userVisibleOnly: true,
                     applicationServerKey: 'BHsZGAU8DED4TsUZ0UygHuZWzqVKv2nWJYxsYbYHL3iHYYgseKpYtr2U3YxgRf4wpIqPlqCkmWEUC0oLSS1TvCI'
                 });
                 
+                // Відправка subscription на сервер
                 await api.request('/subscribe', {
                     method: 'POST',
                     body: JSON.stringify(subscription)
                 });
+            } catch (error) {
+                console.error('Помилка налаштування push:', error);
             }
-        } catch (e) {
-            console.log("Push-сповіщення не підтримуються або відхилені");
         }
     }
 }
 
+// Offline support
 function setupOfflineSupport() {
     if ('serviceWorker' in navigator) {
-        // Використовуємо відносний шлях для GitHub Pages
-        navigator.serviceWorker.register('./sw.js').catch(err => console.log("SW error:", err));
+        navigator.serviceWorker.register('/sw.js').catch(error => {
+            console.error('Помилка реєстрації Service Worker:', error);
+        });
     }
-    window.addEventListener('online', () => syncData());
+    
+    // Кешування даних для офлайн режиму
+    window.addEventListener('online', () => {
+        syncData();
+    });
 }
 
-async function syncData() {
+// Синхронізація даних - глобальна функція
+window.syncData = async function() {
     showLoading();
     try {
-        if (api.syncData) await api.syncData();
+        await api.syncData();
         await loadData();
         showToast('Дані синхронізовано');
     } catch (error) {
         showError('Помилка синхронізації');
-    } finally {
-        hideLoading();
     }
-}
+    hideLoading();
+};
 
-function logout() {
-    localStorage.clear();
+// Вихід - глобальна функція
+window.logout = function() {
+    if (api) {
+        api.logout();
+    }
     location.reload();
-}
+};
 
+// Допоміжні функції
 function showLoading() {
     const overlay = document.getElementById('loadingOverlay');
     if (overlay) overlay.style.display = 'flex';
@@ -252,24 +298,12 @@ function hideLoading() {
     if (overlay) overlay.style.display = 'none';
 }
 
-function setupEventListeners() {
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            switchTab(btn.dataset.tab);
-        });
-    });
-}
-
-function switchTab(tabName) {
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.tab === tabName);
-    });
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.toggle('active', content.id === `${tabName}Tab`);
-    });
+function showError(message) {
+    alert(message);
 }
 
 function showToast(message) {
+    // Простий toast
     const toast = document.createElement('div');
     toast.className = 'toast';
     toast.textContent = message;
@@ -277,43 +311,28 @@ function showToast(message) {
     setTimeout(() => toast.remove(), 3000);
 }
 
-// Залишаємо старі функції для сумісності з вашими api.js
-async function loadSubstitutions() {
-    try {
-        const data = await api.getSubstitutions();
-        const container = document.getElementById('substitutionsList');
-        if (!container) return;
-        if (!data || data.length === 0) {
-            container.innerHTML = '<div class="empty-state">✅ Замін немає</div>';
-            return;
-        }
-        container.innerHTML = data.map(sub => `
-            <div class="substitution-card">
-                <strong>${sub.lesson_num}-й урок</strong>
-                <p>❌ ${sub.old_teacher}</p>
-                <p>✅ ${sub.new_teacher}</p>
-                <p>🏫 ${sub.classroom || 'той самий'}</p>
-            </div>
-        `).join('');
-    } catch (e) { console.error(e); }
+// Налаштування обробників подій
+function setupEventListeners() {
+    // Таби
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tab = btn.dataset.tab;
+            switchTab(tab);
+        });
+    });
 }
 
-async function loadCurrentLesson() {
-    try {
-        const lesson = await api.getCurrentLesson();
-        const container = document.getElementById('currentLesson');
-        if (!container) return;
-        if (!lesson) {
-            container.innerHTML = '<div class="empty-state">⏰ Уроків зараз немає</div>';
-            return;
-        }
-        container.innerHTML = `
-            <div class="current-lesson-card">
-                <div class="current-time">${lesson.lesson_num}-й урок</div>
-                <div class="lesson-subject">${lesson.subject}</div>
-                <div>👨‍🏫 ${lesson.teacher}</div>
-                <div>🏫 ${lesson.classroom}</div>
-            </div>
-        `;
-    } catch (e) { console.error(e); }
+function switchTab(tabName) {
+    // Оновлення активного табу
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.tab === tabName) btn.classList.add('active');
+    });
+    
+    // Оновлення вмісту
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    const activeTab = document.getElementById(`${tabName}Tab`);
+    if (activeTab) activeTab.classList.add('active');
 }

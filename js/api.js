@@ -1,24 +1,23 @@
 class LyceumAPI {
     constructor() {
-        // Для розробки використовуємо localStorage
         this.token = localStorage.getItem('auth_token');
     }
     
     async request(endpoint, options = {}) {
-        // Симуляція API для розробки
-        console.log(`API Request: ${endpoint}`, options);
+        // Симуляція затримки мережі
+        await new Promise(resolve => setTimeout(resolve, 300));
         
-        // Імітуємо затримку мережі
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Тестові дані
+        // Тестові дані для входу
         if (endpoint === '/auth/login') {
-            const { login, password } = JSON.parse(options.body);
+            const body = JSON.parse(options.body);
+            const { login, password } = body;
+            
+            // Демо-користувачі
             if (login === 'admin' && password === 'admin123') {
                 return {
-                    token: 'test_token',
+                    token: 'demo_token_admin',
                     user: {
-                        full_name: 'Адміністратор',
+                        full_name: 'Адміністратор Системи',
                         role: 'admin',
                         group_name: '',
                         subgroup: ''
@@ -26,12 +25,22 @@ class LyceumAPI {
                 };
             } else if (login === 'teacher' && password === 'teacher123') {
                 return {
-                    token: 'test_token',
+                    token: 'demo_token_teacher',
                     user: {
-                        full_name: 'Іваненко І.І.',
+                        full_name: 'Іваненко Іван Іванович',
                         role: 'teacher',
                         group_name: '8-А',
                         subgroup: ''
+                    }
+                };
+            } else if (login === 'student' && password === 'student123') {
+                return {
+                    token: 'demo_token_student',
+                    user: {
+                        full_name: 'Петренко Петро Петрович',
+                        role: 'student',
+                        group_name: '8-А',
+                        subgroup: '1'
                     }
                 };
             } else {
@@ -39,18 +48,24 @@ class LyceumAPI {
             }
         }
         
+        // Розклад
         if (endpoint === '/schedule') {
-            const url = new URL(`https://dummy${endpoint}`);
-            const day = url.searchParams.get('day');
-            return this.getMockSchedule(day);
+            return this.getMockSchedule();
         }
         
+        // Заміни
         if (endpoint === '/substitutions') {
             return [];
         }
         
+        // Поточний урок
         if (endpoint === '/current-lesson') {
             return null;
+        }
+        
+        // Синхронізація
+        if (endpoint === '/sync') {
+            return { success: true, timestamp: new Date().toISOString() };
         }
         
         return {};
@@ -89,7 +104,7 @@ class LyceumAPI {
     }
     
     async syncData() {
-        return { success: true };
+        return await this.request('/sync', { method: 'POST' });
     }
     
     getMockSchedule(day) {
@@ -108,14 +123,17 @@ class LyceumAPI {
             ],
             'Середа': [
                 { lesson_num: 1, time_range: '9:00 – 9:40', subject: 'Зарубіжна література', teacher: 'Гриценко Т.М.', classroom: '105' },
-                { lesson_num: 2, time_range: '9:45 – 10:25', subject: 'Інформатика', teacher: 'Романенко В.В.', classroom: '202' }
+                { lesson_num: 2, time_range: '9:45 – 10:25', subject: 'Інформатика', teacher: 'Романенко В.В.', classroom: '202' },
+                { lesson_num: 3, time_range: '10:45 – 11:25', subject: 'Алгебра', teacher: 'Іваненко І.І.', classroom: '101' }
             ],
             'Четвер': [
                 { lesson_num: 1, time_range: '9:00 – 9:40', subject: 'Фізкультура', teacher: 'Спортивний О.П.', classroom: 'Спортзал' },
-                { lesson_num: 2, time_range: '9:45 – 10:25', subject: 'Музика', teacher: 'Музченко І.І.', classroom: '106' }
+                { lesson_num: 2, time_range: '9:45 – 10:25', subject: 'Музика', teacher: 'Музченко І.І.', classroom: '106' },
+                { lesson_num: 3, time_range: '10:45 – 11:25', subject: 'Трудове навчання', teacher: 'Трудовий М.П.', classroom: 'Майстерня' }
             ],
             'П\'ятниця': [
-                { lesson_num: 1, time_range: '9:00 – 9:40', subject: 'Трудове навчання', teacher: 'Трудовий М.П.', classroom: 'Майстерня' }
+                { lesson_num: 1, time_range: '9:00 – 9:40', subject: 'Основи здоров\'я', teacher: 'Здорова Н.В.', classroom: '107' },
+                { lesson_num: 2, time_range: '9:45 – 10:25', subject: 'Мистецтво', teacher: 'Артченко О.О.', classroom: '108' }
             ]
         };
         

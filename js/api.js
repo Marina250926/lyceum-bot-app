@@ -1,6 +1,6 @@
 class LyceumAPI {
     constructor() {
-        this.baseURL = 'https://your-bot-api.com/api'; // Ваш API endpoint
+        this.baseURL = 'http://192.168.31.222:8000/api';
         this.token = localStorage.getItem('auth_token');
     }
     
